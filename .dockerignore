@@ -1,0 +1,50 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv
+venv
+ENV
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Node
+webui/node_modules
+webui/.vite
+
+# Build artifacts (前端构建产物在 Docker 中重新生成)
+static/admin
+
+# 配置和敏感文件
+.env
+.env.*
+config.json
+
+# 日志和临时文件
+*.log
+logs/
+tmp/
+temp/
+
+# 测试
+tests/
+*.test.py
+
+# 文档和截图
+*.md
+截图/
+docs/
+
+# Claude Code
+.claude/
+CLAUDE*.md
