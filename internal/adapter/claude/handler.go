@@ -18,6 +18,9 @@ import (
 	"ds2api/internal/util"
 )
 
+// writeJSON is a package-internal alias to avoid mass-renaming all call-sites.
+var writeJSON = util.WriteJSON
+
 type Handler struct {
 	Store *config.Store
 	Auth  *auth.Resolver
@@ -113,11 +116,13 @@ func (h *Handler) Messages(w http.ResponseWriter, r *http.Request) {
 	}
 
 	toolNames := extractClaudeToolNames(toolsRequested)
-	if toBool(req["stream"]) {
+	if util.ToBool(req["stream"]) {
 		h.handleClaudeStreamRealtime(w, r, resp, model, normalized, thinkingEnabled, searchEnabled, toolNames)
 		return
 	}
-	fullText, fullThinking := collectDeepSeek(resp, thinkingEnabled)
+	result := sse.CollectStream(resp, thinkingEnabled, true)
+	fullText := result.Text
+	fullThinking := result.Thinking
 	detected := util.ParseToolCalls(fullText, toolNames)
 	content := make([]map[string]any, 0, 4)
 	if fullThinking != "" {
@@ -196,41 +201,6 @@ func (h *Handler) CountTokens(w http.ResponseWriter, r *http.Request) {
 		inputTokens = 1
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"input_tokens": inputTokens})
-}
-
-func collectDeepSeek(resp *http.Response, thinkingEnabled bool) (string, string) {
-	defer resp.Body.Close()
-	text := strings.Builder{}
-	thinking := strings.Builder{}
-	currentType := "text"
-	if thinkingEnabled {
-		currentType = "thinking"
-	}
-	scanner := bufio.NewScanner(resp.Body)
-	buf := make([]byte, 0, 64*1024)
-	scanner.Buffer(buf, 2*1024*1024)
-	for scanner.Scan() {
-		chunk, done, ok := sse.ParseDeepSeekSSELine(scanner.Bytes())
-		if !ok {
-			continue
-		}
-		if done {
-			break
-		}
-		parts, finished, newType := sse.ParseSSEChunkForContent(chunk, thinkingEnabled, currentType)
-		currentType = newType
-		if finished {
-			break
-		}
-		for _, p := range parts {
-			if p.Type == "thinking" {
-				thinking.WriteString(p.Text)
-			} else {
-				text.WriteString(p.Text)
-			}
-		}
-	}
-	return text.String(), thinking.String()
 }
 
 func (h *Handler) handleClaudeStreamRealtime(w http.ResponseWriter, r *http.Request, resp *http.Response, model string, messages []any, thinkingEnabled, searchEnabled bool, toolNames []string) {
@@ -656,15 +626,4 @@ func cloneMap(in map[string]any) map[string]any {
 		out[k] = v
 	}
 	return out
-}
-
-func toBool(v any) bool {
-	b, _ := v.(bool)
-	return b
-}
-
-func writeJSON(w http.ResponseWriter, status int, payload any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
 }

@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -9,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -151,15 +151,29 @@ func (h *Handler) testAllAccounts(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"total": 0, "success": 0, "failed": 0, "results": []any{}})
 		return
 	}
-	results := make([]map[string]any, 0, len(accounts))
+
+	// Concurrent testing with a semaphore to limit parallelism.
+	const maxConcurrency = 5
+	sem := make(chan struct{}, maxConcurrency)
+	results := make([]map[string]any, len(accounts))
+	var wg sync.WaitGroup
+
+	for i, acc := range accounts {
+		wg.Add(1)
+		go func(idx int, account config.Account) {
+			defer wg.Done()
+			sem <- struct{}{}        // acquire
+			defer func() { <-sem }() // release
+			results[idx] = h.testAccount(r.Context(), account, model, "")
+		}(i, acc)
+	}
+	wg.Wait()
+
 	success := 0
-	for _, acc := range accounts {
-		res := h.testAccount(r.Context(), acc, model, "")
+	for _, res := range results {
 		if ok, _ := res["success"].(bool); ok {
 			success++
 		}
-		results = append(results, res)
-		time.Sleep(time.Second)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"total": len(accounts), "success": success, "failed": len(accounts) - success, "results": results})
 }
@@ -204,6 +218,7 @@ func (h *Handler) testAccount(ctx context.Context, acc config.Account, model, me
 	if !ok {
 		thinking, search = false, false
 	}
+	_ = search
 	pow, err := h.DS.GetPow(ctx, authCtx, 1)
 	if err != nil {
 		result["message"] = "获取 PoW 失败: " + err.Error()
@@ -215,50 +230,21 @@ func (h *Handler) testAccount(ctx context.Context, acc config.Account, model, me
 		result["message"] = "请求失败: " + err.Error()
 		return result
 	}
-	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
+		defer resp.Body.Close()
 		result["message"] = fmt.Sprintf("请求失败: HTTP %d", resp.StatusCode)
 		return result
 	}
-	text := strings.Builder{}
-	think := strings.Builder{}
-	currentType := "text"
-	if thinking {
-		currentType = "thinking"
-	}
-	scanner := bufio.NewScanner(resp.Body)
-	buf := make([]byte, 0, 64*1024)
-	scanner.Buffer(buf, 2*1024*1024)
-	for scanner.Scan() {
-		chunk, done, parsed := sse.ParseDeepSeekSSELine(scanner.Bytes())
-		if !parsed {
-			continue
-		}
-		if done {
-			break
-		}
-		parts, finished, newType := sse.ParseSSEChunkForContent(chunk, thinking, currentType)
-		currentType = newType
-		if finished {
-			break
-		}
-		for _, p := range parts {
-			if p.Type == "thinking" {
-				think.WriteString(p.Text)
-			} else {
-				text.WriteString(p.Text)
-			}
-		}
-	}
+	collected := sse.CollectStream(resp, thinking, true)
 	result["success"] = true
 	result["response_time"] = int(time.Since(start).Milliseconds())
-	if text.Len() > 0 {
-		result["message"] = text.String()
+	if collected.Text != "" {
+		result["message"] = collected.Text
 	} else {
 		result["message"] = "（无回复内容）"
 	}
-	if think.Len() > 0 {
-		result["thinking"] = think.String()
+	if collected.Thinking != "" {
+		result["thinking"] = collected.Thinking
 	}
 	return result
 }

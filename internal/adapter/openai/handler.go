@@ -20,6 +20,10 @@ import (
 	"ds2api/internal/util"
 )
 
+// writeJSON is a package-internal alias kept to avoid mass-renaming across
+// every call-site in this file. It delegates to the shared util version.
+var writeJSON = util.WriteJSON
+
 type Handler struct {
 	Store *config.Store
 	Auth  *auth.Resolver
@@ -117,7 +121,7 @@ func (h *Handler) ChatCompletions(w http.ResponseWriter, r *http.Request) {
 		writeOpenAIError(w, http.StatusInternalServerError, "Failed to get completion.")
 		return
 	}
-	if toBool(req["stream"]) {
+	if util.ToBool(req["stream"]) {
 		h.handleStream(w, r, resp, sessionID, model, finalPrompt, thinkingEnabled, searchEnabled, toolNames)
 		return
 	}
@@ -125,50 +129,17 @@ func (h *Handler) ChatCompletions(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) handleNonStream(w http.ResponseWriter, ctx context.Context, resp *http.Response, completionID, model, finalPrompt string, thinkingEnabled, searchEnabled bool, toolNames []string) {
-	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
+		defer resp.Body.Close()
 		body, _ := io.ReadAll(resp.Body)
 		writeOpenAIError(w, resp.StatusCode, string(body))
 		return
 	}
-	thinking := strings.Builder{}
-	text := strings.Builder{}
-	currentType := "text"
-	if thinkingEnabled {
-		currentType = "thinking"
-	}
 	_ = ctx
-	_ = deepseek.ScanSSELines(resp, func(line []byte) bool {
-		chunk, done, ok := sse.ParseDeepSeekSSELine(line)
-		if !ok {
-			return true
-		}
-		if done {
-			return false
-		}
-		if _, hasErr := chunk["error"]; hasErr {
-			return false
-		}
-		parts, finished, newType := sse.ParseSSEChunkForContent(chunk, thinkingEnabled, currentType)
-		currentType = newType
-		if finished {
-			return false
-		}
-		for _, p := range parts {
-			if searchEnabled && sse.IsCitation(p.Text) {
-				continue
-			}
-			if p.Type == "thinking" {
-				thinking.WriteString(p.Text)
-			} else {
-				text.WriteString(p.Text)
-			}
-		}
-		return true
-	})
+	result := sse.CollectStream(resp, thinkingEnabled, true)
 
-	finalThinking := thinking.String()
-	finalText := text.String()
+	finalThinking := result.Thinking
+	finalText := result.Text
 	detected := util.ParseToolCalls(finalText, toolNames)
 	finishReason := "stop"
 	messageObj := map[string]any{"role": "assistant", "content": finalText}
@@ -505,19 +476,6 @@ func injectToolPrompt(messages []map[string]any, tools []any) ([]map[string]any,
 	}
 	messages = append([]map[string]any{{"role": "system", "content": toolPrompt}}, messages...)
 	return messages, names
-}
-
-func toBool(v any) bool {
-	if b, ok := v.(bool); ok {
-		return b
-	}
-	return false
-}
-
-func writeJSON(w http.ResponseWriter, status int, payload any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
 }
 
 func writeOpenAIError(w http.ResponseWriter, status int, message string) {

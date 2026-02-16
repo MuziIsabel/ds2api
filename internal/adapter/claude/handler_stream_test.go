@@ -1,6 +1,7 @@
 package claude
 
 import (
+	"ds2api/internal/sse"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -241,12 +242,12 @@ func TestCollectDeepSeekRegression(t *testing.T) {
 		`data: {"p":"response/content","v":"答"}`,
 		`data: [DONE]`,
 	)
-	text, thinking := collectDeepSeek(resp, true)
-	if thinking != "想" {
-		t.Fatalf("unexpected thinking: %q", thinking)
+	result := sse.CollectStream(resp, true, true)
+	if result.Thinking != "想" {
+		t.Fatalf("unexpected thinking: %q", result.Thinking)
 	}
-	if text != "答" {
-		t.Fatalf("unexpected text: %q", text)
+	if result.Text != "答" {
+		t.Fatalf("unexpected text: %q", result.Text)
 	}
 }
 

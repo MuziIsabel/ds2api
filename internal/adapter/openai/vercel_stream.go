@@ -52,7 +52,7 @@ func (h *Handler) handleVercelStreamPrepare(w http.ResponseWriter, r *http.Reque
 		writeOpenAIError(w, http.StatusBadRequest, "invalid json")
 		return
 	}
-	if !toBool(req["stream"]) {
+	if !util.ToBool(req["stream"]) {
 		writeOpenAIError(w, http.StatusBadRequest, "stream must be true")
 		return
 	}

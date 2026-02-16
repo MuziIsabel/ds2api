@@ -154,6 +154,8 @@ type Store struct {
 	cfg     Config
 	path    string
 	fromEnv bool
+	keyMap  map[string]struct{} // O(1) API key lookup index
+	accMap  map[string]int      // O(1) account lookup: identifier -> slice index
 }
 
 func BaseDir() string {
@@ -199,7 +201,24 @@ func LoadStore() *Store {
 	if len(cfg.Keys) == 0 && len(cfg.Accounts) == 0 {
 		Logger.Warn("[config] empty config loaded")
 	}
-	return &Store{cfg: cfg, path: ConfigPath(), fromEnv: fromEnv}
+	s := &Store{cfg: cfg, path: ConfigPath(), fromEnv: fromEnv}
+	s.rebuildIndexes()
+	return s
+}
+
+// rebuildIndexes must be called with the lock already held (or during init).
+func (s *Store) rebuildIndexes() {
+	s.keyMap = make(map[string]struct{}, len(s.cfg.Keys))
+	for _, k := range s.cfg.Keys {
+		s.keyMap[k] = struct{}{}
+	}
+	s.accMap = make(map[string]int, len(s.cfg.Accounts))
+	for i, acc := range s.cfg.Accounts {
+		id := acc.Identifier()
+		if id != "" {
+			s.accMap[id] = i
+		}
+	}
 }
 
 func loadConfig() (Config, bool, error) {
@@ -247,12 +266,8 @@ func (s *Store) Snapshot() Config {
 func (s *Store) HasAPIKey(k string) bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	for _, key := range s.cfg.Keys {
-		if key == k {
-			return true
-		}
-	}
-	return false
+	_, ok := s.keyMap[k]
+	return ok
 }
 
 func (s *Store) Keys() []string {
@@ -271,10 +286,8 @@ func (s *Store) FindAccount(identifier string) (Account, bool) {
 	identifier = strings.TrimSpace(identifier)
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	for _, acc := range s.cfg.Accounts {
-		if acc.Identifier() == identifier {
-			return acc, true
-		}
+	if idx, ok := s.accMap[identifier]; ok && idx < len(s.cfg.Accounts) {
+		return s.cfg.Accounts[idx], true
 	}
 	return Account{}, false
 }
@@ -282,11 +295,9 @@ func (s *Store) FindAccount(identifier string) (Account, bool) {
 func (s *Store) UpdateAccountToken(identifier, token string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	for i := range s.cfg.Accounts {
-		if s.cfg.Accounts[i].Identifier() == identifier {
-			s.cfg.Accounts[i].Token = token
-			return s.saveLocked()
-		}
+	if idx, ok := s.accMap[identifier]; ok && idx < len(s.cfg.Accounts) {
+		s.cfg.Accounts[idx].Token = token
+		return s.saveLocked()
 	}
 	return errors.New("account not found")
 }
@@ -295,6 +306,7 @@ func (s *Store) Replace(cfg Config) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.cfg = cfg.Clone()
+	s.rebuildIndexes()
 	return s.saveLocked()
 }
 
@@ -306,6 +318,7 @@ func (s *Store) Update(mutator func(*Config) error) error {
 		return err
 	}
 	s.cfg = cfg
+	s.rebuildIndexes()
 	return s.saveLocked()
 }
 

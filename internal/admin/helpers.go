@@ -1,14 +1,18 @@
 package admin
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"ds2api/internal/config"
+	"ds2api/internal/util"
 )
+
+// writeJSON and intFrom are package-internal aliases for the shared util versions.
+var writeJSON = util.WriteJSON
+var intFrom = util.IntFrom
 
 func reverseAccounts(a []config.Account) {
 	for i, j := 0, len(a)-1; i < j; i, j = i+1, j-1 {
@@ -26,19 +30,6 @@ func intFromQuery(r *http.Request, key string, d int) int {
 		return d
 	}
 	return n
-}
-
-func intFrom(v any) int {
-	switch n := v.(type) {
-	case float64:
-		return int(n)
-	case int:
-		return n
-	case int64:
-		return int(n)
-	default:
-		return 0
-	}
 }
 
 func nilIfEmpty(s string) any {
@@ -89,10 +80,4 @@ func statusOr(v int, d int) int {
 		return d
 	}
 	return v
-}
-
-func writeJSON(w http.ResponseWriter, status int, payload any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
 }

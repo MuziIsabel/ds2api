@@ -16,9 +16,13 @@ import (
 	"ds2api/internal/auth"
 	"ds2api/internal/config"
 	trans "ds2api/internal/deepseek/transport"
+	"ds2api/internal/util"
 
 	"github.com/andybalholm/brotli"
 )
+
+// intFrom is a package-internal alias for the shared util version.
+var intFrom = util.IntFrom
 
 type Client struct {
 	Store      *config.Store
@@ -286,19 +290,6 @@ func isTokenInvalid(status int, code int, msg string) bool {
 		return true
 	}
 	return strings.Contains(msg, "token") || strings.Contains(msg, "unauthorized")
-}
-
-func intFrom(v any) int {
-	switch n := v.(type) {
-	case float64:
-		return int(n)
-	case int:
-		return n
-	case int64:
-		return int(n)
-	default:
-		return 0
-	}
 }
 
 func readResponseBody(resp *http.Response) ([]byte, error) {
