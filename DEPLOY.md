@@ -66,6 +66,7 @@ docker-compose up -d --build
 - serverless 入口：`api/index.go`
 - 路由与缓存头：`vercel.json`
 - 构建阶段会自动执行 `npm ci --prefix webui && npm run build --prefix webui`
+- `vercel.json` 已将 `/admin/assets/*` 与 `/admin` 页面走静态产物，`/admin/*` API 仍走 `api/index`
 
 至少配置环境变量：
 

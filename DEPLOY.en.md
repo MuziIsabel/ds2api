@@ -66,6 +66,7 @@ Notes:
 - Serverless entry: `api/index.go`
 - Rewrites and cache headers: `vercel.json`
 - Build stage runs `npm ci --prefix webui && npm run build --prefix webui` automatically
+- `vercel.json` routes `/admin/assets/*` and the `/admin` page to static output, while `/admin/*` APIs still go to `api/index`
 
 Minimum environment variables:
 
