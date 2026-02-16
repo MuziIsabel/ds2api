@@ -286,20 +286,35 @@ func (s *Store) FindAccount(identifier string) (Account, bool) {
 	identifier = strings.TrimSpace(identifier)
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	if idx, ok := s.accMap[identifier]; ok && idx < len(s.cfg.Accounts) {
+	if idx, ok := s.findAccountIndexLocked(identifier); ok {
 		return s.cfg.Accounts[idx], true
 	}
 	return Account{}, false
 }
 
 func (s *Store) UpdateAccountToken(identifier, token string) error {
+	identifier = strings.TrimSpace(identifier)
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if idx, ok := s.accMap[identifier]; ok && idx < len(s.cfg.Accounts) {
-		s.cfg.Accounts[idx].Token = token
-		return s.saveLocked()
+	idx, ok := s.findAccountIndexLocked(identifier)
+	if !ok {
+		return errors.New("account not found")
 	}
-	return errors.New("account not found")
+	oldID := s.cfg.Accounts[idx].Identifier()
+	s.cfg.Accounts[idx].Token = token
+	newID := s.cfg.Accounts[idx].Identifier()
+	// Keep historical aliases usable for long-lived queues while also adding
+	// the latest identifier after token refresh.
+	if identifier != "" {
+		s.accMap[identifier] = idx
+	}
+	if oldID != "" {
+		s.accMap[oldID] = idx
+	}
+	if newID != "" {
+		s.accMap[newID] = idx
+	}
+	return s.saveLocked()
 }
 
 func (s *Store) Replace(cfg Config) error {
@@ -346,6 +361,21 @@ func (s *Store) saveLocked() error {
 		return err
 	}
 	return os.WriteFile(s.path, b, 0o644)
+}
+
+// findAccountIndexLocked expects the store lock to already be held.
+func (s *Store) findAccountIndexLocked(identifier string) (int, bool) {
+	if idx, ok := s.accMap[identifier]; ok && idx >= 0 && idx < len(s.cfg.Accounts) {
+		return idx, true
+	}
+	// Fallback for token-only accounts whose derived identifier changed after
+	// a token refresh; this preserves correctness on map misses.
+	for i, acc := range s.cfg.Accounts {
+		if acc.Identifier() == identifier {
+			return i, true
+		}
+	}
+	return -1, false
 }
 
 func (s *Store) IsEnvBacked() bool {

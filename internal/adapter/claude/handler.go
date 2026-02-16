@@ -422,30 +422,21 @@ func (h *Handler) handleClaudeStreamRealtime(w http.ResponseWriter, r *http.Requ
 				return
 			}
 
-			chunk, doneSignal, parsed := sse.ParseDeepSeekSSELine(line)
-			if !parsed {
+			parsed := sse.ParseDeepSeekContentLine(line, thinkingEnabled, currentType)
+			currentType = parsed.NextType
+			if !parsed.Parsed {
 				continue
 			}
-			if doneSignal {
-				finalize("end_turn")
+			if parsed.ErrorMessage != "" {
+				sendError(parsed.ErrorMessage)
 				return
 			}
-			if errObj, hasErr := chunk["error"]; hasErr {
-				sendError(fmt.Sprintf("%v", errObj))
-				return
-			}
-			if code, _ := chunk["code"].(string); code == "content_filter" {
-				sendError("content filtered by upstream")
-				return
-			}
-			parts, finished, newType := sse.ParseSSEChunkForContent(chunk, thinkingEnabled, currentType)
-			currentType = newType
-			if finished {
+			if parsed.Stop {
 				finalize("end_turn")
 				return
 			}
 
-			for _, p := range parts {
+			for _, p := range parsed.Parts {
 				if p.Text == "" {
 					continue
 				}

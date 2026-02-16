@@ -31,22 +31,15 @@ func CollectStream(resp *http.Response, thinkingEnabled bool, closeBody bool) Co
 		currentType = "thinking"
 	}
 	_ = deepseek.ScanSSELines(resp, func(line []byte) bool {
-		chunk, done, ok := ParseDeepSeekSSELine(line)
-		if !ok {
+		result := ParseDeepSeekContentLine(line, thinkingEnabled, currentType)
+		currentType = result.NextType
+		if !result.Parsed {
 			return true
 		}
-		if done {
+		if result.Stop {
 			return false
 		}
-		if _, hasErr := chunk["error"]; hasErr {
-			return false
-		}
-		parts, finished, newType := ParseSSEChunkForContent(chunk, thinkingEnabled, currentType)
-		currentType = newType
-		if finished {
-			return false
-		}
-		for _, p := range parts {
+		for _, p := range result.Parts {
 			if p.Type == "thinking" {
 				thinking.WriteString(p.Text)
 			} else {

@@ -39,3 +39,34 @@ func TestStoreFindAccountWithTokenOnlyIdentifier(t *testing.T) {
 		t.Fatalf("unexpected token value: %q", found.Token)
 	}
 }
+
+func TestStoreUpdateAccountTokenKeepsOldAndNewIdentifierResolvable(t *testing.T) {
+	t.Setenv("DS2API_CONFIG_JSON", `{
+		"accounts":[{"token":"old-token"}]
+	}`)
+
+	store := LoadStore()
+	before := store.Accounts()
+	if len(before) != 1 {
+		t.Fatalf("expected 1 account, got %d", len(before))
+	}
+	oldID := before[0].Identifier()
+	if oldID == "" {
+		t.Fatal("expected old identifier")
+	}
+	if err := store.UpdateAccountToken(oldID, "new-token"); err != nil {
+		t.Fatalf("update token failed: %v", err)
+	}
+
+	after := store.Accounts()
+	newID := after[0].Identifier()
+	if newID == "" || newID == oldID {
+		t.Fatalf("expected changed identifier, old=%q new=%q", oldID, newID)
+	}
+	if got, ok := store.FindAccount(newID); !ok || got.Token != "new-token" {
+		t.Fatalf("expected find by new identifier")
+	}
+	if got, ok := store.FindAccount(oldID); !ok || got.Token != "new-token" {
+		t.Fatalf("expected find by old identifier alias")
+	}
+}

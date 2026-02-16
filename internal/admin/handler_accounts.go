@@ -154,20 +154,9 @@ func (h *Handler) testAllAccounts(w http.ResponseWriter, r *http.Request) {
 
 	// Concurrent testing with a semaphore to limit parallelism.
 	const maxConcurrency = 5
-	sem := make(chan struct{}, maxConcurrency)
-	results := make([]map[string]any, len(accounts))
-	var wg sync.WaitGroup
-
-	for i, acc := range accounts {
-		wg.Add(1)
-		go func(idx int, account config.Account) {
-			defer wg.Done()
-			sem <- struct{}{}        // acquire
-			defer func() { <-sem }() // release
-			results[idx] = h.testAccount(r.Context(), account, model, "")
-		}(i, acc)
-	}
-	wg.Wait()
+	results := runAccountTestsConcurrently(accounts, maxConcurrency, func(_ int, account config.Account) map[string]any {
+		return h.testAccount(r.Context(), account, model, "")
+	})
 
 	success := 0
 	for _, res := range results {
@@ -176,6 +165,26 @@ func (h *Handler) testAllAccounts(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"total": len(accounts), "success": success, "failed": len(accounts) - success, "results": results})
+}
+
+func runAccountTestsConcurrently(accounts []config.Account, maxConcurrency int, testFn func(int, config.Account) map[string]any) []map[string]any {
+	if maxConcurrency <= 0 {
+		maxConcurrency = 1
+	}
+	sem := make(chan struct{}, maxConcurrency)
+	results := make([]map[string]any, len(accounts))
+	var wg sync.WaitGroup
+	for i, acc := range accounts {
+		wg.Add(1)
+		go func(idx int, account config.Account) {
+			defer wg.Done()
+			sem <- struct{}{}        // acquire
+			defer func() { <-sem }() // release
+			results[idx] = testFn(idx, account)
+		}(i, acc)
+	}
+	wg.Wait()
+	return results
 }
 
 func (h *Handler) testAccount(ctx context.Context, acc config.Account, model, message string) map[string]any {

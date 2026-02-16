@@ -329,26 +329,21 @@ func (h *Handler) handleStream(w http.ResponseWriter, r *http.Request, resp *htt
 				finalize("stop")
 				return
 			}
-			chunk, doneSignal, parsed := sse.ParseDeepSeekSSELine(line)
-			if !parsed {
+			parsed := sse.ParseDeepSeekContentLine(line, thinkingEnabled, currentType)
+			currentType = parsed.NextType
+			if !parsed.Parsed {
 				continue
 			}
-			if doneSignal {
-				finalize("stop")
-				return
-			}
-			if _, hasErr := chunk["error"]; hasErr || chunk["code"] == "content_filter" {
+			if parsed.ContentFilter || parsed.ErrorMessage != "" {
 				finalize("content_filter")
 				return
 			}
-			parts, finished, newType := sse.ParseSSEChunkForContent(chunk, thinkingEnabled, currentType)
-			currentType = newType
-			if finished {
+			if parsed.Stop {
 				finalize("stop")
 				return
 			}
-			newChoices := make([]map[string]any, 0, len(parts))
-			for _, p := range parts {
+			newChoices := make([]map[string]any, 0, len(parsed.Parts))
+			for _, p := range parsed.Parts {
 				if searchEnabled && sse.IsCitation(p.Text) {
 					continue
 				}
