@@ -14,9 +14,9 @@ function extractToolNames(tools) {
     }
     const fn = t.function && typeof t.function === 'object' ? t.function : t;
     const name = toStringSafe(fn.name);
-    if (name) {
-      out.push(name);
-    }
+    // Keep parity with Go injectToolPrompt: object tools without name still
+    // enter tool mode via fallback name "unknown".
+    out.push(name || 'unknown');
   }
   return out;
 }
@@ -413,10 +413,10 @@ function parseToolCallInput(v) {
       if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
         return parsed;
       }
+      return { _raw: raw };
     } catch (_err) {
       return { _raw: raw };
     }
-    return {};
   }
   if (typeof v === 'object' && !Array.isArray(v)) {
     return v;
