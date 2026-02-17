@@ -148,6 +148,22 @@ cp config.example.json config.json
 ./ds2api
 ```
 
+### Option 5: OpenCode CLI
+
+1. Copy the example config:
+
+```bash
+cp opencode.json.example opencode.json
+```
+
+2. Edit `opencode.json`:
+- Set `baseURL` to your DS2API endpoint (for example, `https://your-domain.com/v1`)
+- Set `apiKey` to your DS2API key (from `config.keys`)
+
+3. Start OpenCode CLI in the project directory (run `opencode` using your installed method).
+
+> Recommended: use the OpenAI-compatible path (`/v1/*`) via `@ai-sdk/openai-compatible` as shown in the example.
+
 ## Configuration
 
 ### `config.json` Example

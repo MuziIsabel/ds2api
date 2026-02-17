@@ -148,6 +148,22 @@ cp config.example.json config.json
 ./ds2api
 ```
 
+### 方式五：OpenCode CLI 接入
+
+1. 复制示例配置：
+
+```bash
+cp opencode.json.example opencode.json
+```
+
+2. 编辑 `opencode.json`：
+- 将 `baseURL` 改为你的 DS2API 地址（例如 `https://your-domain.com/v1`）
+- 将 `apiKey` 改为你的 DS2API key（对应 `config.keys`）
+
+3. 在项目目录启动 OpenCode CLI（按你的安装方式运行 `opencode`）。
+
+> 建议优先使用 OpenAI 兼容路径（`/v1/*`），即示例里的 `@ai-sdk/openai-compatible` provider。
+
 ## 配置说明
 
 ### `config.json` 示例
