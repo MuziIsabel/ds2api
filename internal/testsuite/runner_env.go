@@ -101,7 +101,7 @@ func preflightSteps() [][]string {
 	return [][]string{
 		{"go", "test", "./...", "-count=1"},
 		{"./tests/scripts/check-node-split-syntax.sh"},
-		{"node", "--test", "api/helpers/stream-tool-sieve.test.js", "api/chat-stream.test.js", "api/compat/js_compat_test.js"},
+		{"node", "--test", "tests/node/stream-tool-sieve.test.js", "tests/node/chat-stream.test.js", "tests/node/js_compat_test.js"},
 		{"npm", "run", "build", "--prefix", "webui"},
 	}
 }

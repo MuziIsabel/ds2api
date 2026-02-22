@@ -10,7 +10,7 @@ const {
   flushToolSieve,
   parseToolCalls,
   parseStandaloneToolCalls,
-} = require('./stream-tool-sieve');
+} = require('../../internal/js/helpers/stream-tool-sieve.js');
 
 function runSieve(chunks, toolNames) {
   const state = createToolSieveState();

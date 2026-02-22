@@ -5,8 +5,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const chatStream = require('../chat-stream');
-const { parseToolCalls } = require('../helpers/stream-tool-sieve');
+const chatStream = require('../../api/chat-stream.js');
+const { parseToolCalls } = require('../../internal/js/helpers/stream-tool-sieve.js');
 
 const { parseChunkForContent, estimateTokens } = chatStream.__test;
 

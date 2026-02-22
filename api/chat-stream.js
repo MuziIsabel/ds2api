@@ -1,3 +1,3 @@
 'use strict';
 
-module.exports = require('./chat-stream/index.js');
+module.exports = require('../internal/js/chat-stream/index.js');

@@ -3,12 +3,12 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const handler = require('./chat-stream');
+const handler = require('../../api/chat-stream.js');
 const {
   createToolSieveState,
   processToolSieveChunk,
   flushToolSieve,
-} = require('./helpers/stream-tool-sieve');
+} = require('../../internal/js/helpers/stream-tool-sieve.js');
 
 const {
   parseChunkForContent,
