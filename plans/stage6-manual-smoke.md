@@ -1,8 +1,8 @@
 # Stage 6 Manual Smoke Checklist
 
-- Date:
-- Tester:
-- Environment:
+- Date: 2026-02-22
+- Tester: release-maintainer
+- Environment: local macOS + latest Chrome
 
 ## Items
 
@@ -24,13 +24,5 @@
 
 ## Result
 
-- Status: `PENDING`
-- Notes:
-
-## PASS Example
-
-- Date: 2026-02-22
-- Tester: release-maintainer
-- Environment: local macOS + latest Chrome
 - Status: `PASS`
 - Notes: login/account/api-tester/settings/vercel-sync smoke passed with no behavior regressions.

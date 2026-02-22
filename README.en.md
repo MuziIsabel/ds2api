@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/github/license/CJackHwang/ds2api.svg)](LICENSE)
 ![Stars](https://img.shields.io/github/stars/CJackHwang/ds2api.svg)
 ![Forks](https://img.shields.io/github/forks/CJackHwang/ds2api.svg)
-[![Version](https://img.shields.io/badge/version-1.6.11-blue.svg)](version.txt)
+[![Release](https://img.shields.io/github/v/release/CJackHwang/ds2api?display_name=tag)](https://github.com/CJackHwang/ds2api/releases)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](DEPLOY.en.md)
 
 Language: [中文](README.MD) | [English](README.en.md)
@@ -192,8 +192,8 @@ GitHub Actions automatically builds multi-platform archives on each Release:
 
 ```bash
 # After downloading the archive for your platform
-tar -xzf ds2api_v1.7.0_linux_amd64.tar.gz
-cd ds2api_v1.7.0_linux_amd64
+tar -xzf ds2api_<tag>_linux_amd64.tar.gz
+cd ds2api_<tag>_linux_amd64
 cp config.example.json config.json
 # Edit config.json
 ./ds2api
@@ -298,6 +298,8 @@ cp opencode.json.example opencode.json
 | `DS2API_ACCOUNT_CONCURRENCY` | Alias (legacy compat) | — |
 | `DS2API_ACCOUNT_MAX_QUEUE` | Waiting queue limit | `recommended_concurrency` |
 | `DS2API_ACCOUNT_QUEUE_SIZE` | Alias (legacy compat) | — |
+| `DS2API_GLOBAL_MAX_INFLIGHT` | Global max in-flight requests | `recommended_concurrency` |
+| `DS2API_MAX_INFLIGHT` | Alias (legacy compat) | — |
 | `DS2API_VERCEL_INTERNAL_SECRET` | Vercel hybrid streaming internal auth | Falls back to `DS2API_ADMIN_KEY` |
 | `DS2API_VERCEL_STREAM_LEASE_TTL_SECONDS` | Stream lease TTL seconds | `900` |
 | `DS2API_DEV_PACKET_CAPTURE` | Local dev packet capture switch (record recent request/response bodies) | Enabled by default on non-Vercel local runtime |
@@ -407,7 +409,7 @@ ds2api/
 │   └── scripts/             # Unified test script entrypoints (unit/e2e)
 ├── static/admin/            # WebUI build output (not committed to Git)
 ├── .github/
-│   ├── workflows/           # GitHub Actions (Release artifact automation)
+│   ├── workflows/           # GitHub Actions (quality gates + release automation)
 │   ├── ISSUE_TEMPLATE/      # Issue templates
 │   └── PULL_REQUEST_TEMPLATE.md
 ├── config.example.json      # Config file template
@@ -416,8 +418,7 @@ ds2api/
 ├── docker-compose.yml       # Production Docker Compose
 ├── docker-compose.dev.yml   # Development Docker Compose
 ├── vercel.json              # Vercel routing and build config
-├── go.mod / go.sum          # Go module dependencies
-└── version.txt              # Version number
+└── go.mod / go.sum          # Go module dependencies
 ```
 
 ## Documentation Index

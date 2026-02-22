@@ -1,8 +1,8 @@
-# DS2API Refactor Baseline (Backfilled)
+# DS2API Refactor Baseline (Historical Snapshot)
 
-- Recorded at: `2026-02-22T08:53:54Z`
-- Branch: `dev`
-- HEAD: `5d3989a`
+- Snapshot time: `2026-02-22T08:53:54Z`
+- Snapshot branch: `dev`
+- Snapshot HEAD: `5d3989a`
 - Scope: backend + node api + webui large-file decoupling (no behavior change)
 
 ## Gate Commands
@@ -27,5 +27,6 @@
 
 ## Notes
 
-- This baseline file is a backfill artifact for phase 0 process tracking.
+- This file records a historical baseline for refactor process tracking.
+- It is not intended to represent the current repository HEAD.
 - Frontend manual smoke for phase 6 still requires human execution and sign-off.

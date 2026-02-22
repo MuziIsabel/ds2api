@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/github/license/CJackHwang/ds2api.svg)](LICENSE)
 ![Stars](https://img.shields.io/github/stars/CJackHwang/ds2api.svg)
 ![Forks](https://img.shields.io/github/forks/CJackHwang/ds2api.svg)
-[![Version](https://img.shields.io/badge/version-1.6.11-blue.svg)](version.txt)
+[![Release](https://img.shields.io/github/v/release/CJackHwang/ds2api?display_name=tag)](https://github.com/CJackHwang/ds2api/releases)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](DEPLOY.md)
 
 语言 / Language: [中文](README.MD) | [English](README.en.md)
@@ -192,8 +192,8 @@ base64 < config.json | tr -d '\n'
 
 ```bash
 # 下载对应平台的压缩包后
-tar -xzf ds2api_v1.7.0_linux_amd64.tar.gz
-cd ds2api_v1.7.0_linux_amd64
+tar -xzf ds2api_<tag>_linux_amd64.tar.gz
+cd ds2api_<tag>_linux_amd64
 cp config.example.json config.json
 # 编辑 config.json
 ./ds2api
@@ -298,6 +298,8 @@ cp opencode.json.example opencode.json
 | `DS2API_ACCOUNT_CONCURRENCY` | 同上（兼容旧名） | — |
 | `DS2API_ACCOUNT_MAX_QUEUE` | 等待队列上限 | `recommended_concurrency` |
 | `DS2API_ACCOUNT_QUEUE_SIZE` | 同上（兼容旧名） | — |
+| `DS2API_GLOBAL_MAX_INFLIGHT` | 全局最大 in-flight 请求数 | `recommended_concurrency` |
+| `DS2API_MAX_INFLIGHT` | 同上（兼容旧名） | — |
 | `DS2API_VERCEL_INTERNAL_SECRET` | Vercel 混合流式内部鉴权密钥 | 回退用 `DS2API_ADMIN_KEY` |
 | `DS2API_VERCEL_STREAM_LEASE_TTL_SECONDS` | 流式 lease 过期秒数 | `900` |
 | `DS2API_DEV_PACKET_CAPTURE` | 本地开发抓包开关（记录最近会话请求/响应体） | 本地非 Vercel 默认开启 |
@@ -407,7 +409,7 @@ ds2api/
 │   └── scripts/             # 统一测试脚本入口（unit/e2e）
 ├── static/admin/            # WebUI 构建产物（不提交到 Git）
 ├── .github/
-│   ├── workflows/           # GitHub Actions（Release 自动构建）
+│   ├── workflows/           # GitHub Actions（质量门禁 + Release 自动构建）
 │   ├── ISSUE_TEMPLATE/      # Issue 模板
 │   └── PULL_REQUEST_TEMPLATE.md
 ├── config.example.json      # 配置文件示例
@@ -416,8 +418,7 @@ ds2api/
 ├── docker-compose.yml       # 生产环境 Docker Compose
 ├── docker-compose.dev.yml   # 开发环境 Docker Compose
 ├── vercel.json              # Vercel 路由与构建配置
-├── go.mod / go.sum          # Go 模块依赖
-└── version.txt              # 版本号
+└── go.mod / go.sum          # Go 模块依赖
 ```
 
 ## 文档索引
