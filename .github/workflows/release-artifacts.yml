@@ -4,6 +4,12 @@ on:
   release:
     types:
       - published
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release tag to build/publish (e.g. v2.1.6)"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -12,6 +18,8 @@ permissions:
 jobs:
   build-and-upload:
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name || github.event.inputs.release_tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,7 +50,7 @@ jobs:
       - name: Build Multi-Platform Archives
         run: |
           set -euo pipefail
-          TAG="${{ github.event.release.tag_name }}"
+          TAG="${RELEASE_TAG}"
           mkdir -p dist
 
           targets=(
@@ -117,7 +125,7 @@ jobs:
           images: |
             ghcr.io/${{ github.repository }}
           tags: |
-            type=raw,value=${{ github.event.release.tag_name }}
+            type=raw,value=${{ env.RELEASE_TAG }}
             type=raw,value=latest
 
       - name: Build and Push Docker Image
@@ -136,7 +144,7 @@ jobs:
       - name: Export Docker image archives for release assets
         run: |
           set -euo pipefail
-          TAG="${{ github.event.release.tag_name }}"
+          TAG="${RELEASE_TAG}"
 
           docker buildx build \
             --platform linux/amd64 \
@@ -159,16 +167,16 @@ jobs:
       - name: Validate release tag
         run: |
           set -euo pipefail
-          TAG="${{ github.event.release.tag_name }}"
+          TAG="${RELEASE_TAG}"
           if [ -z "${TAG}" ]; then
-            echo "release.tag_name is empty; this workflow must run from a published GitHub Release." >&2
+            echo "release tag is empty; set release_tag when using workflow_dispatch." >&2
             exit 1
           fi
 
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.release.tag_name }}
+          tag_name: ${{ env.RELEASE_TAG }}
           files: |
             dist/*.tar.gz
             dist/*.zip
