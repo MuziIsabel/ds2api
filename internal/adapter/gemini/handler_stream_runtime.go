@@ -165,7 +165,13 @@ func (s *geminiStreamRuntime) finalize() {
 	s.sendChunk(map[string]any{
 		"candidates": []map[string]any{
 			{
-				"index":        0,
+				"index": 0,
+				"content": map[string]any{
+					"role": "model",
+					"parts": []map[string]any{
+						{"text": ""},
+					},
+				},
 				"finishReason": "STOP",
 			},
 		},
