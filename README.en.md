@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/ds2api-icon.svg" width="128" height="128" alt="DS2API icon" />
+</p>
+
 # DS2API
 
 [![License](https://img.shields.io/github/license/CJackHwang/ds2api.svg)](LICENSE)
