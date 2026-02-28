@@ -141,6 +141,20 @@ test('sieve flushes incomplete captured tool json as text on stream finalize', (
   assert.equal(leakedText.includes('{'), true);
 });
 
+test('sieve still intercepts large tool json payloads over previous capture limit', () => {
+  const large = 'a'.repeat(9000);
+  const payload = `{"tool_calls":[{"name":"read_file","input":{"path":"${large}"}}]}`;
+  const events = runSieve(
+    [payload.slice(0, 3000), payload.slice(3000, 7000), payload.slice(7000)],
+    ['read_file'],
+  );
+  const leakedText = collectText(events);
+  const hasToolCall = events.some((evt) => evt.type === 'tool_calls' && evt.calls?.length > 0);
+  const hasToolDelta = events.some((evt) => evt.type === 'tool_call_deltas' && evt.deltas?.length > 0);
+  assert.equal(hasToolCall || hasToolDelta, true);
+  assert.equal(leakedText.toLowerCase().includes('tool_calls'), false);
+});
+
 test('sieve keeps plain text intact in tool mode when no tool call appears', () => {
   const events = runSieve(
     ['你好，', '这是普通文本回复。', '请继续。'],
