@@ -26,15 +26,6 @@ func processToolSieveChunk(state *toolStreamSieveState, chunk string, toolNames 
 			}
 			prefix, calls, suffix, ready := consumeToolCapture(state, toolNames)
 			if !ready {
-				if state.capture.Len() > toolSieveCaptureLimit {
-					content := state.capture.String()
-					state.capture.Reset()
-					state.capturing = false
-					state.resetIncrementalToolState()
-					state.noteText(content)
-					events = append(events, toolStreamEvent{Content: content})
-					continue
-				}
 				break
 			}
 			state.capture.Reset()

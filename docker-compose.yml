@@ -1,6 +1,6 @@
 services:
   ds2api:
-    image: crpi-cnazxqmg4avmg4fq.cn-beijing.personal.cr.aliyuncs.com/ronghuaxueleng/ds2api:latest
+    image: ghcr.io/cjackhwang/ds2api:latest
     container_name: ds2api
     restart: always
     ports:

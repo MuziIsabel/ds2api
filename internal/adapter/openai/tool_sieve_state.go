@@ -32,7 +32,6 @@ type toolCallDelta struct {
 	Arguments string
 }
 
-const toolSieveCaptureLimit = 8 * 1024
 const toolSieveContextTailLimit = 256
 
 func (s *toolStreamSieveState) resetIncrementalToolState() {

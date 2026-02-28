@@ -1,6 +1,5 @@
 'use strict';
 
-const TOOL_SIEVE_CAPTURE_LIMIT = 8 * 1024;
 const TOOL_SIEVE_CONTEXT_TAIL_LIMIT = 256;
 
 function createToolSieveState() {
@@ -78,7 +77,6 @@ function toStringSafe(v) {
 }
 
 module.exports = {
-  TOOL_SIEVE_CAPTURE_LIMIT,
   TOOL_SIEVE_CONTEXT_TAIL_LIMIT,
   createToolSieveState,
   resetIncrementalToolState,

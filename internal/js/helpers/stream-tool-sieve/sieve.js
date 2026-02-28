@@ -1,7 +1,6 @@
 'use strict';
 
 const {
-  TOOL_SIEVE_CAPTURE_LIMIT,
   resetIncrementalToolState,
   noteText,
   insideCodeFence,
@@ -37,14 +36,6 @@ function processToolSieveChunk(state, chunk, toolNames) {
       }
       const consumed = consumeToolCapture(state, toolNames);
       if (!consumed.ready) {
-        if (state.capture.length > TOOL_SIEVE_CAPTURE_LIMIT) {
-          noteText(state, state.capture);
-          events.push({ type: 'text', text: state.capture });
-          state.capture = '';
-          state.capturing = false;
-          resetIncrementalToolState(state);
-          continue;
-        }
         break;
       }
       state.capture = '';
