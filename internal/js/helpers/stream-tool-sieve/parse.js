@@ -29,25 +29,38 @@ function extractToolNames(tools) {
 }
 
 function parseToolCalls(text, toolNames) {
+  return parseToolCallsDetailed(text, toolNames).calls;
+}
+
+function parseToolCallsDetailed(text, toolNames) {
+  const result = emptyParseResult();
   if (!toStringSafe(text)) {
-    return [];
+    return result;
   }
   const sanitized = stripFencedCodeBlocks(text);
   if (!toStringSafe(sanitized)) {
-    return [];
+    return result;
   }
+  result.sawToolCallSyntax = sanitized.toLowerCase().includes('tool_calls');
+
   const candidates = buildToolCallCandidates(sanitized);
   let parsed = [];
   for (const c of candidates) {
     parsed = parseToolCallsPayload(c);
     if (parsed.length > 0) {
+      result.sawToolCallSyntax = true;
       break;
     }
   }
   if (parsed.length === 0) {
-    return [];
+    return result;
   }
-  return filterToolCalls(parsed, toolNames);
+
+  const filtered = filterToolCallsDetailed(parsed, toolNames);
+  result.calls = filtered.calls;
+  result.rejectedToolNames = filtered.rejectedToolNames;
+  result.rejectedByPolicy = filtered.rejectedToolNames.length > 0 && filtered.calls.length === 0;
+  return result;
 }
 
 function stripFencedCodeBlocks(text) {
@@ -59,37 +72,43 @@ function stripFencedCodeBlocks(text) {
 }
 
 function parseStandaloneToolCalls(text, toolNames) {
+  return parseStandaloneToolCallsDetailed(text, toolNames).calls;
+}
+
+function parseStandaloneToolCallsDetailed(text, toolNames) {
+  const result = emptyParseResult();
   const trimmed = toStringSafe(text);
   if (!trimmed) {
-    return [];
-  }
-  if ((trimmed.startsWith('```') && trimmed.endsWith('```')) || trimmed.includes('```')) {
-    return [];
+    return result;
   }
   if (looksLikeToolExampleContext(trimmed)) {
-    return [];
+    return result;
   }
-  const candidates = [trimmed];
-  if (trimmed.startsWith('```') && trimmed.endsWith('```')) {
-    const m = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-    if (m && m[1]) {
-      candidates.push(toStringSafe(m[1]));
-    }
+  result.sawToolCallSyntax = trimmed.toLowerCase().includes('tool_calls');
+  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) {
+    return result;
   }
-  for (const candidate of candidates) {
-    const c = toStringSafe(candidate);
-    if (!c) {
-      continue;
-    }
-    if (!c.startsWith('{') && !c.startsWith('[')) {
-      continue;
-    }
-    const parsed = parseToolCallsPayload(c);
-    if (parsed.length > 0) {
-      return filterToolCalls(parsed, toolNames);
-    }
+
+  const parsed = parseToolCallsPayload(trimmed);
+  if (parsed.length === 0) {
+    return result;
   }
-  return [];
+
+  result.sawToolCallSyntax = true;
+  const filtered = filterToolCallsDetailed(parsed, toolNames);
+  result.calls = filtered.calls;
+  result.rejectedToolNames = filtered.rejectedToolNames;
+  result.rejectedByPolicy = filtered.rejectedToolNames.length > 0 && filtered.calls.length === 0;
+  return result;
+}
+
+function emptyParseResult() {
+  return {
+    calls: [],
+    sawToolCallSyntax: false,
+    rejectedByPolicy: false,
+    rejectedToolNames: [],
+  };
 }
 
 function buildToolCallCandidates(text) {
@@ -251,23 +270,69 @@ function parseToolCallInput(v) {
   return {};
 }
 
-function filterToolCalls(parsed, toolNames) {
-  const allowed = new Set((toolNames || []).filter(Boolean));
-  const out = [];
+function filterToolCallsDetailed(parsed, toolNames) {
+  const allowed = new Set();
+  const allowedCanonical = new Map();
+  for (const item of toolNames || []) {
+    const name = toStringSafe(item);
+    if (!name) {
+      continue;
+    }
+    allowed.add(name);
+    const lower = name.toLowerCase();
+    if (!allowedCanonical.has(lower)) {
+      allowedCanonical.set(lower, name);
+    }
+  }
+
+  if (allowed.size === 0) {
+    const rejected = [];
+    const seen = new Set();
+    for (const tc of parsed) {
+      if (!tc || !tc.name) {
+        continue;
+      }
+      if (seen.has(tc.name)) {
+        continue;
+      }
+      seen.add(tc.name);
+      rejected.push(tc.name);
+    }
+    return { calls: [], rejectedToolNames: rejected };
+  }
+
+  const calls = [];
+  const rejected = [];
+  const seenRejected = new Set();
   for (const tc of parsed) {
     if (!tc || !tc.name) {
       continue;
     }
-    if (allowed.size > 0 && !allowed.has(tc.name)) {
+    let matchedName = '';
+    if (allowed.has(tc.name)) {
+      matchedName = tc.name;
+    } else {
+      matchedName = allowedCanonical.get(tc.name.toLowerCase()) || '';
+    }
+    if (!matchedName) {
+      if (!seenRejected.has(tc.name)) {
+        seenRejected.add(tc.name);
+        rejected.push(tc.name);
+      }
       continue;
     }
-    out.push({ name: tc.name, input: tc.input || {} });
+    calls.push({
+      name: matchedName,
+      input: tc.input && typeof tc.input === 'object' && !Array.isArray(tc.input) ? tc.input : {},
+    });
   }
-  return out;
+  return { calls, rejectedToolNames: rejected };
 }
 
 module.exports = {
   extractToolNames,
   parseToolCalls,
+  parseToolCallsDetailed,
   parseStandaloneToolCalls,
+  parseStandaloneToolCallsDetailed,
 };
